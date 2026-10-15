@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=Re:Zero — Another Beginning
+Description=An ivory and lavender Re:Zero theme with quiet motion and a CAVA audio spectrum.
+Author=Omar
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=rezero-another-beginning
+Theme-API=2.0
+QtVersion=6

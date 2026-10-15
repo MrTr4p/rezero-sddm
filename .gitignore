@@ -1,0 +1,8 @@
+runtime/
+preview/qt-preview
+preview/theme-tests
+validation/
+__pycache__/
+*.pyc
+.env
+.env.*
