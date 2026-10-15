@@ -4,22 +4,20 @@ An ivory-and-lavender **Qt 6 SDDM theme** with drifting feathers, gentle hair sw
 
 ![Another Beginning login screen](docs/preview.png)
 
-## Install and test the SDDM theme temporarily
+## Permanent installation
 
-Use this method to check the theme with the **real Qt 6 SDDM greeter** from your running graphical desktop. It copies the theme into a temporary user directory and removes that copy when the test exits. Your selected login theme and SDDM configuration stay unchanged; no logout, reboot, or display-manager restart is needed.
+These steps install **Re:Zero — Another Beginning as your login-screen theme** and keep it selected after reboot. The commands below target Arch Linux with Qt 6 SDDM. For other distributions, install equivalent Qt 6 packages and check their SDDM paths. You also need an installed desktop session, such as Hyprland or Plasma.
 
-### 1. Check dependencies
-
-On Arch Linux, install any missing runtime dependencies:
+### 1. Install dependencies
 
 ```sh
 sudo pacman -S --needed git sddm qt6-declarative qt6-multimedia qt6-svg \
   mesa ttf-jetbrains-mono noto-fonts-cjk
 ```
 
-Skip this command if the dependencies are already installed. Packages installed by the command remain installed; only the test theme copy is temporary. The native greeter test does not require Python, noVNC, CAVA, or the preview service. The compiled hair shader is included in the repository.
+The installed theme does not require Python, noVNC, CAVA, or the browser preview service. Its compiled hair shader is included. SDDM must support `QtVersion=6`; use the Qt 6 greeter for the preview below.
 
-### 2. Get the theme
+### 2. Download the repository
 
 Run this in the directory where you keep your projects, or enter your existing checkout:
 
@@ -28,9 +26,109 @@ git clone https://github.com/MrTr4p/rezero-sddm.git
 cd rezero-sddm
 ```
 
-### 3. Install a temporary copy and test it
+### 3. Install the theme files
 
-Run the entire block from the repository root, in a terminal inside your graphical session:
+Run these commands from the repository root. Only `theme/` is installed; the project and browser demo stay in your checkout.
+
+```sh
+sudo install -d -m 0755 /usr/share/sddm/themes/rezero
+sudo cp -R theme/. /usr/share/sddm/themes/rezero/
+sudo chown -R root:root /usr/share/sddm/themes/rezero
+sudo chmod -R u=rwX,go=rX /usr/share/sddm/themes/rezero
+sudo sed -i 's|^TelemetryUrl=.*|TelemetryUrl=|' /usr/share/sddm/themes/rezero/theme.conf
+```
+
+The last command disables the optional browser-preview telemetry bridge in the installed copy. Login, session selection, artwork, and animations work independently of that bridge. CPU/RAM readings and the CAVA spectrum are unavailable unless you separately configure telemetry for the SDDM session. Audio playback also depends on audio access in the greeter session.
+
+### 4. Preview the installed theme
+
+From a terminal in your graphical desktop session, run:
+
+```sh
+QT_QPA_PLATFORM=xcb QT_QUICK_CONTROLS_STYLE=Basic QSG_RHI_BACKEND=opengl \
+  sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/rezero
+```
+
+Check that the artwork, session choices, and login controls appear. Press **Ctrl+C in the launching terminal** to close the preview. The installed theme files remain in place.
+
+This uses X11 or XWayland, including on a Wayland desktop such as Hyprland. [SDDM test mode](https://github.com/sddm/sddm/blob/v0.21.0/docs/THEMING.md#testing) does not authenticate, start a desktop, or execute power actions. A blank username, `localhost` greeting, or disabled power controls can occur without the display-manager connection. The browser demo's `test` password does not apply to the real login screen.
+
+### 5. Select Re:Zero permanently
+
+Create a dedicated SDDM configuration file. If `/etc/sddm.conf.d/99-rezero.conf` already exists, back it up before replacing it. If you already use `GreeterEnvironment` for other settings, retain those comma-separated entries alongside the two below.
+
+```sh
+sudo install -d -m 0755 /etc/sddm.conf.d
+sudo tee /etc/sddm.conf.d/99-rezero.conf > /dev/null <<'EOF'
+[Theme]
+Current=rezero
+
+[General]
+GreeterEnvironment=QT_QUICK_CONTROLS_STYLE=Basic,QSG_RHI_BACKEND=opengl
+EOF
+sudo chmod 0644 /etc/sddm.conf.d/99-rezero.conf
+```
+
+**Check for existing overrides:** SDDM reads local snippets in `/etc/sddm.conf.d/`, then `/etc/sddm.conf`, which has higher priority. If that legacy file sets `[Theme] Current`, back it up and remove that conflicting key so `99-rezero.conf` can select the theme. Also check for a later-sorting snippet that selects another theme. If you configured a custom `ThemeDir`, either install `rezero` there or set `ThemeDir=/usr/share/sddm/themes` in the effective `[Theme]` section. Existing `GreeterEnvironment` overrides must also agree with your intended settings. See the [SDDM configuration reference](https://github.com/sddm/sddm/blob/v0.21.0/data/man/sddm.conf.rst.in).
+
+For example, **only if `/etc/sddm.conf` exists and needs editing**:
+
+```sh
+sudo cp -a /etc/sddm.conf "/etc/sddm.conf.rezero-backup-$(date +%Y%m%d-%H%M%S)"
+sudoedit /etc/sddm.conf
+```
+
+Keep your existing session, autologin, and display-server settings. Remove only conflicting keys you intend the new snippet to control, and keep the backup path for rollback.
+
+### 6. Use it at the next boot
+
+If SDDM is already enabled as your display manager, no service change is needed. For a new SDDM setup with **no other display manager enabled**, enable it for boot:
+
+```sh
+sudo systemctl enable sddm.service
+```
+
+If GDM, LightDM, or another display manager is enabled, follow your distribution's instructions to switch to SDDM first. Do not enable competing display managers.
+
+Save your work, then reboot when ready:
+
+```sh
+systemctl reboot
+```
+
+The Re:Zero theme will appear at the next SDDM login screen and remain selected on subsequent boots. Sign in with your **normal Linux username and password**. If autologin is configured, SDDM can skip the login screen; disable autologin separately if you want to see the theme at boot. Restarting SDDM during a desktop session can end that session, so use the planned reboot above.
+
+### Customize or update an installation
+
+Edit the installed configuration with:
+
+```sh
+sudoedit /usr/share/sddm/themes/rezero/theme.conf
+```
+
+Set `Background` to one of the paths in [Wallpapers](#wallpapers), `Animations=false` to reduce motion, or `PreferredSession` to your desktop's `.desktop` filename from `/usr/share/wayland-sessions/` or `/usr/share/xsessions/`. Keep `TelemetryUrl=` empty unless you have configured a greeter-session bridge. Edit the installed `theme.conf` directly to clear telemetry; SDDM 0.21 ignores empty values in `theme.conf.user`.
+
+To update, save any customized installed files, run `git pull --ff-only` in your checkout, and repeat step 3. That copy replaces `theme.conf`, so reapply your custom settings afterward. Step 5 only needs repeating if you want to change the selection or greeter environment.
+
+### Restore your previous theme or uninstall
+
+Remove the selection snippet first:
+
+```sh
+sudo rm -f /etc/sddm.conf.d/99-rezero.conf
+```
+
+Your earlier SDDM configuration will apply again; with no selected theme, SDDM uses its built-in fallback. If you edited `/etc/sddm.conf` or another snippet in step 5, restore the previous values from your backup as well. If `99-rezero.conf` existed before this installation, restore its saved copy instead of leaving it deleted. Make sure no remaining configuration selects `rezero`, then remove the installed theme:
+
+```sh
+sudo rm -rf -- /usr/share/sddm/themes/rezero
+```
+
+Reboot when ready. Removing the theme does not uninstall or disable SDDM. If the login screen fails to load, switch to a text console with **Ctrl+Alt+F3**, log in with your Linux account, and perform the same rollback steps there.
+
+## Optional preview without installing
+
+After installing the dependencies and downloading the repository, run this block from its root to preview a temporary copy. It leaves the system theme directory and selected login theme unchanged and removes the copy when you exit:
 
 ```sh
 (
@@ -50,13 +148,7 @@ Run the entire block from the repository root, in a terminal inside your graphic
 )
 ```
 
-This uses X11 or XWayland, including on a Wayland desktop such as Hyprland. Use `sddm-greeter-qt6`; the Qt 5 greeter cannot load this theme. If the executable is missing, check your distribution's Qt 6 SDDM package. If Qt cannot connect to the display, run the command from a terminal in your graphical desktop session.
-
-The theme should show its artwork, animated feathers, session choices, and login controls. Try selecting a session, entering dummy text, toggling password visibility, and pressing Escape to clear the password. Press **Ctrl+C in the launching terminal** to finish; the temporary theme copy is removed automatically. The repository and original `theme/theme.conf` remain intact.
-
-[SDDM test mode](https://github.com/sddm/sddm/blob/v0.21.0/docs/THEMING.md#testing) does not perform real authentication, start a desktop, or execute power actions. A blank username, `localhost` greeting, or disabled power controls can occur without the display-manager connection. Use the browser demo below to exercise simulated successful and failed sign-ins; its `test` password belongs to that demo only.
-
-The temporary copy has `TelemetryUrl` cleared so it works independently of the preview service. CPU/RAM values are unavailable and CAVA shows **offline** in this test. This procedure checks theme loading and rendering; it does not enable the theme for boot or validate a real login session.
+Press **Ctrl+C in the launching terminal** to finish. Test mode does not validate a real login session, and telemetry is disabled in this copy.
 
 ## Try the interactive browser demo
 
@@ -130,7 +222,7 @@ The System panel uses **CAVA** to monitor the default audio output through Pulse
 
 The Audio play button starts the included synthesized ambient loop. Volume and mute affect only the theme's audio. Audio starts paused. CPU, memory, swap, and battery values come from Linux system files through the local preview bridge.
 
-`TelemetryUrl` in `theme/theme.conf` points to the optional localhost bridge; leave it empty to disable telemetry. An installed SDDM greeter would need a bridge and audio setup in its own session. **This repository provides a local preview and does not install or configure the real login manager.**
+`TelemetryUrl` in the source `theme/theme.conf` points to the optional localhost bridge. The permanent installation steps clear it in the installed copy. An installed SDDM greeter needs its own bridge and audio setup to provide the same telemetry and audio behavior as the browser demo; these services are not installed by the theme-copy commands. The login form and theme rendering do not depend on them.
 
 ## Development and validation
 
