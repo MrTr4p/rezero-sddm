@@ -4,7 +4,61 @@ An ivory-and-lavender **Qt 6 SDDM theme** with drifting feathers, gentle hair sw
 
 ![Another Beginning login screen](docs/preview.png)
 
-## Try it locally
+## Install and test the SDDM theme temporarily
+
+Use this method to check the theme with the **real Qt 6 SDDM greeter** from your running graphical desktop. It copies the theme into a temporary user directory and removes that copy when the test exits. Your selected login theme and SDDM configuration stay unchanged; no logout, reboot, or display-manager restart is needed.
+
+### 1. Check dependencies
+
+On Arch Linux, install any missing runtime dependencies:
+
+```sh
+sudo pacman -S --needed git sddm qt6-declarative qt6-multimedia qt6-svg \
+  mesa ttf-jetbrains-mono noto-fonts-cjk
+```
+
+Skip this command if the dependencies are already installed. Packages installed by the command remain installed; only the test theme copy is temporary. The native greeter test does not require Python, noVNC, CAVA, or the preview service. The compiled hair shader is included in the repository.
+
+### 2. Get the theme
+
+Run this in the directory where you keep your projects, or enter your existing checkout:
+
+```sh
+git clone https://github.com/MrTr4p/rezero-sddm.git
+cd rezero-sddm
+```
+
+### 3. Install a temporary copy and test it
+
+Run the entire block from the repository root, in a terminal inside your graphical session:
+
+```sh
+(
+  set -eu
+  test -f theme/Main.qml
+  mkdir -p "$HOME/.local/share"
+  theme_test_dir=$(mktemp -d "$HOME/.local/share/rezero-sddm-test.XXXXXX")
+  trap 'rm -rf -- "$theme_test_dir"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+
+  cp -R theme "$theme_test_dir/theme"
+  sed -i 's|^TelemetryUrl=.*|TelemetryUrl=|' "$theme_test_dir/theme/theme.conf"
+
+  QT_QPA_PLATFORM=xcb QT_QUICK_CONTROLS_STYLE=Basic QSG_RHI_BACKEND=opengl \
+    sddm-greeter-qt6 --test-mode --theme "$theme_test_dir/theme"
+)
+```
+
+This uses X11 or XWayland, including on a Wayland desktop such as Hyprland. Use `sddm-greeter-qt6`; the Qt 5 greeter cannot load this theme. If the executable is missing, check your distribution's Qt 6 SDDM package. If Qt cannot connect to the display, run the command from a terminal in your graphical desktop session.
+
+The theme should show its artwork, animated feathers, session choices, and login controls. Try selecting a session, entering dummy text, toggling password visibility, and pressing Escape to clear the password. Press **Ctrl+C in the launching terminal** to finish; the temporary theme copy is removed automatically. The repository and original `theme/theme.conf` remain intact.
+
+[SDDM test mode](https://github.com/sddm/sddm/blob/v0.21.0/docs/THEMING.md#testing) does not perform real authentication, start a desktop, or execute power actions. A blank username, `localhost` greeting, or disabled power controls can occur without the display-manager connection. Use the browser demo below to exercise simulated successful and failed sign-ins; its `test` password belongs to that demo only.
+
+The temporary copy has `TelemetryUrl` cleared so it works independently of the preview service. CPU/RAM values are unavailable and CAVA shows **offline** in this test. This procedure checks theme loading and rendering; it does not enable the theme for boot or validate a real login session.
+
+## Try the interactive browser demo
 
 The preview runs on Linux with a systemd user session. It displays the theme in an isolated Xvfb display through noVNC. It never authenticates against the operating system, launches a desktop, executes power operations, or modifies the installed SDDM configuration.
 
